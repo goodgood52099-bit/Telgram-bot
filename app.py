@@ -25,7 +25,7 @@ def send_message(text, chat_id=CHAT_ID):
 def ask_gpt(prompt):
     try:
         response = openai.chat.completions.create(
-            model="gpt-5-mini",  # 你也可以改成 "gpt-3.5-turbo"
+            model="gpt-3.5-turbo",  # 你也可以改成 "gpt-3.5-turbo"
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
