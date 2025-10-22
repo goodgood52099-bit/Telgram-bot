@@ -21,21 +21,23 @@ def send_message(text, chat_id=CHAT_ID):
     except Exception as e:
         print("❌ Telegram 傳訊息錯誤：", e)
 
-# 呼叫 GPT（低成本模型 + 捕捉 RateLimitError）
+# 呼叫 GPT（低成本模型 + 防錯）
 def ask_gpt(prompt):
     try:
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-3.5-turbo",  # 低成本模型
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
-    except openai.error.RateLimitError:
-        print("⚠️ GPT API 額度已用完或速率限制")
-        return "⚠️ AI API 額度已用完或請求過快，請稍後再試。"
     except Exception as e:
-        print("⚠️ GPT 呼叫錯誤：", e)
-        traceback.print_exc()
-        return f"AI 回覆發生錯誤：{e}"
+        err_str = str(e)
+        if "insufficient_quota" in err_str or "RateLimitError" in err_str:
+            print("⚠️ GPT API 額度已用完或速率限制")
+            return "⚠️ AI API 額度已用完或請求過快，請稍後再試。"
+        else:
+            print("⚠️ GPT 呼叫錯誤：", e)
+            traceback.print_exc()
+            return f"AI 回覆發生錯誤：{e}"
 
 # Telegram Webhook
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
