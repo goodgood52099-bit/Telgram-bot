@@ -21,14 +21,17 @@ def send_message(text, chat_id=CHAT_ID):
     except Exception as e:
         print("❌ Telegram 傳訊息錯誤：", e)
 
-# 呼叫 GPT（新版 OpenAI API）
+# 呼叫 GPT（低成本模型 + 捕捉 RateLimitError）
 def ask_gpt(prompt):
     try:
         response = openai.chat.completions.create(
-            model="gpt-3.5-turbo",  # 你也可以改成 "gpt-3.5-turbo"
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
+    except openai.error.RateLimitError:
+        print("⚠️ GPT API 額度已用完或速率限制")
+        return "⚠️ AI API 額度已用完或請求過快，請稍後再試。"
     except Exception as e:
         print("⚠️ GPT 呼叫錯誤：", e)
         traceback.print_exc()
@@ -71,7 +74,7 @@ def webhook():
             send_message(f"✅ 收到你的影片！File ID: {video_file_id}", chat_id)
             return {"ok": True}
 
-        # 處理其他訊息
+        # 其他訊息
         else:
             send_message("⚠️ 目前只支援文字、圖片和影片。", chat_id)
             return {"ok": True}
