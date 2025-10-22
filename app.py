@@ -17,7 +17,7 @@ def send_message(text):
 
 def ask_gpt(prompt):
     response = openai.ChatCompletion.create(
-        model="gpt-5-mini",
+        model="gpt-4o-mini",
         messages=[{"role":"user","content":prompt}]
     )
     return response.choices[0].message.content
