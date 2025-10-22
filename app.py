@@ -39,7 +39,7 @@ def ask_gpt(prompt):
 def webhook():
     try:
         data = request.json
-        print("📩 收到 Telegram 資料：", data)
+        print("📩 收到 Telegram JSON：", data)
 
         if not data or "message" not in data:
             return {"ok": False}
@@ -53,31 +53,31 @@ def webhook():
             return {"ok": True}
 
         # 處理文字訊息
-        if "text" in message:
+        if "text" in message and message["text"]:
             text = message["text"]
             answer = ask_gpt(text)
             send_message(answer, chat_id)
             return {"ok": True}
 
-        # 處理圖片
-        elif "photo" in message:
+        # 處理圖片訊息
+        elif "photo" in message and message["photo"]:
             photo_file_id = message["photo"][-1]["file_id"]
             send_message(f"✅ 收到你的圖片！File ID: {photo_file_id}", chat_id)
             return {"ok": True}
 
-        # 處理影片
-        elif "video" in message:
+        # 處理影片訊息
+        elif "video" in message and message["video"]:
             video_file_id = message["video"]["file_id"]
             send_message(f"✅ 收到你的影片！File ID: {video_file_id}", chat_id)
             return {"ok": True}
 
-        # 其他訊息
+        # 處理其他訊息
         else:
             send_message("⚠️ 目前只支援文字、圖片和影片。", chat_id)
             return {"ok": True}
 
     except Exception as e:
-        print("🔥 webhook 錯誤：", e)
+        print("🔥 webhook 發生錯誤：", e)
         traceback.print_exc()
         return {"ok": False}
 
