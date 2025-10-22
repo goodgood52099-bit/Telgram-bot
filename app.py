@@ -2,48 +2,85 @@ from flask import Flask, request
 import requests
 import os
 import openai
+import traceback
 
 app = Flask(__name__)
 
-# 讀取環境變數
+# 環境變數
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = os.environ.get("CHAT_ID")  # ✅ 你的 Telegram ID（只允許這個 ID）
+CHAT_ID = os.environ.get("CHAT_ID")  # 只回覆自己
 OPENAI_KEY = os.environ.get("OPENAI_KEY")
-
 openai.api_key = OPENAI_KEY
+
 TELEGRAM_API = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-# 傳送訊息給 Telegram
+# 傳訊息到 Telegram
 def send_message(text, chat_id=CHAT_ID):
-    requests.post(f"{TELEGRAM_API}/sendMessage", data={"chat_id": chat_id, "text": text})
+    try:
+        requests.post(f"{TELEGRAM_API}/sendMessage", data={"chat_id": chat_id, "text": text})
+    except Exception as e:
+        print("❌ Telegram 傳訊息錯誤：", e)
 
-# 呼叫 OpenAI
+# 呼叫 GPT
 def ask_gpt(prompt):
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("⚠️ GPT 呼叫錯誤：", e)
+        traceback.print_exc()
+        return f"AI 回覆發生錯誤：{e}"
 
 # Telegram Webhook
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook():
-    data = request.json
+    try:
+        data = request.json
+        print("📩 收到 Telegram 資料：", data)
 
-    if "message" in data:
-        text = data["message"].get("text")
-        chat_id = str(data["message"]["chat"]["id"])  # 轉成字串以便比較
+        if not data or "message" not in data:
+            return {"ok": False}
 
-        # ✅ 只回覆你自己的 CHAT_ID
-        if chat_id == str(CHAT_ID):
-            if text:
-                answer = ask_gpt(text)
-                send_message(answer, chat_id)
-        else:
-            # 非本人可選擇忽略或提示
+        message = data["message"]
+        chat_id = str(message["chat"]["id"])
+
+        # 只回覆自己
+        if chat_id != str(CHAT_ID):
             send_message("⚠️ 你沒有權限使用這個 Bot。", chat_id)
+            return {"ok": True}
 
-    return {"ok": True}
+        # 處理文字訊息
+        if "text" in message:
+            text = message["text"]
+            answer = ask_gpt(text)
+            send_message(answer, chat_id)
+            return {"ok": True}
+
+        # 處理圖片
+        elif "photo" in message:
+            photo_file_id = message["photo"][-1]["file_id"]
+            send_message(f"✅ 收到你的圖片！File ID: {photo_file_id}", chat_id)
+            return {"ok": True}
+
+        # 處理影片
+        elif "video" in message:
+            video_file_id = message["video"]["file_id"]
+            send_message(f"✅ 收到你的影片！File ID: {video_file_id}", chat_id)
+            return {"ok": True}
+
+        # 其他訊息
+        else:
+            send_message("⚠️ 目前只支援文字、圖片和影片。", chat_id)
+            return {"ok": True}
+
+    except Exception as e:
+        print("🔥 webhook 錯誤：", e)
+        traceback.print_exc()
+        return {"ok": False}
 
 if __name__ == "__main__":
+    print("🚀 Flask 伺服器啟動中...")
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
