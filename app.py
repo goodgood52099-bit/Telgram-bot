@@ -21,11 +21,11 @@ def send_message(text, chat_id=CHAT_ID):
     except Exception as e:
         print("❌ Telegram 傳訊息錯誤：", e)
 
-# 呼叫 GPT
+# 呼叫 GPT（新版 OpenAI API）
 def ask_gpt(prompt):
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+        response = openai.chat.completions.create(
+            model="gpt-5-mini",  # 你也可以改成 "gpt-3.5-turbo"
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
